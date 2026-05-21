@@ -92,6 +92,30 @@ function assertValidURL(maybeUrl: string) {
 	}
 }
 
+function buildValidatedUrl(baseUrl: string): string {
+	try {
+		// Minimal path validation
+		if (baseUrl.includes('/../') || /\/%2e%2e\//i.test(baseUrl)) {
+			throw new Error('Invalid path');
+		}
+
+		const url = new URL(baseUrl);
+
+		// Protocol + host checks
+		const allowedDomains = ['example.com']; // add your allowed domains here
+		if (!allowedDomains.includes(url.hostname)) {
+			throw new Error('Invalid host');
+		}
+		if (!['http:', 'https:'].includes(url.protocol)) {
+			throw new Error('Invalid protocol');
+		}
+
+		return url.href;
+	} catch {
+		throw new Error('Invalid URL');
+	}
+}
+
 function switchRemote(url: URL, remote: string) {
 	const workerUrl = new URL(url);
 	const remoteUrl = new URL(remote);
@@ -353,7 +377,8 @@ async function handleTokenExchange(url: URL) {
 		throw new NoExchangeUrl();
 	}
 	assertValidURL(exchangeUrl);
-	const exchangeRes = await fetch(exchangeUrl);
+	const validatedUrl = buildValidatedUrl(exchangeUrl);
+	const exchangeRes = await fetch(validatedUrl);
 	if (exchangeRes.status !== 200) {
 		const exchange = new URL(exchangeUrl);
 		// Clear sensitive token
